@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego del Ahorcado</title>
+    <style>
+         body { /* Estilo general del cuerpo */
+            font-family: Arial, sans-serif; 
+            background: linear-gradient(135deg, #ff7eb3, #ff758c); /* Fondo con degradado */
+            color: white; /* Color de texto blanco */
+            margin: 0; /* Sin márgenes */
+            padding: 0; /* Sin relleno */
+            display: flex; 
+            flex-direction: column; /* Coloca elementos en columna */
+            align-items: center; /* Alineación centrada horizontal */
+            justify-content: center; /* Alineación centrada vertical */
+            min-height: 100vh; /* Altura mínima de la pantalla */
+            overflow: hidden; /* Oculta el desbordamiento */
+        }
+        h1 { /* Estilo del título principal */
+            font-size: 2rem; /* Tamaño de fuente */
+            text-shadow: 2px 2px #333; /* Sombra del texto */
+            margin-bottom: 10px; /* Espaciado inferior */
+        }
+        .container { /* Contenedor principal */
+            text-align: center; /* Texto centrado */
+            width: 90%; /* Ancho relativo */
+            max-width: 600px; /* Ancho máximo */
+        }
+        #word { /* Estilo de la palabra oculta */
+            font-size: 1.5rem; /* Tamaño de fuente */
+            letter-spacing: 0.5rem; /* Espaciado entre letras */
+            margin: 20px 0; /* Margen vertical */
+        }
+        .keyboard { /* Contenedor del teclado */
+            display: flex; /* Usa flexbox */
+            flex-wrap: wrap; /* Permite envolver las teclas */
+            justify-content: center; /* Centra las teclas horizontalmente */
+            max-width: 90%; /* Ancho máximo relativo */
+            margin: 0 auto; /* Centrado automático */
+        }
+        .key { /* Estilo de cada tecla */
+            background-color: #ff407e; /* Color de fondo */
+            border: none; /* Sin borde */
+            margin: 3px; /* Espaciado */
+            padding: 8px 12px; /* Relleno */
+            border-radius: 5px; /* Bordes redondeados */
+            color: white; /* Color del texto */
+            font-size: 0.8rem; /* Tamaño de fuente */
+            cursor: pointer; /* Cambia el cursor al pasar */
+            transition: background-color 0.3s; /* Animación de cambio de color */
+            width: 30px; /* Ancho fijo */
+            height: 30px; /* Alto fijo */
+        }
+        .key:hover { /* Efecto al pasar el cursor */
+            background-color: #d1346b; /* Color al pasar */
+        }
+        canvas { /* Estilo del lienzo para el dibujo */
+            background: #fff; /* Fondo blanco */
+            border: 3px solid #ff758c; /* Borde */
+            display: block; /* Comportamiento de bloque */
+            margin: 20px auto; /* Centrado y espaciado */
+            width: 100%; /* Ancho completo */
+            max-width: 200px; /* Ancho máximo */
+            height: auto; /* Altura automática */
+        }
+        #result { /* Mensaje de resultado */
+            font-size: 1.5rem; /* Tamaño de fuente */
+            margin-top: 20px; /* Espaciado superior */
+            font-weight: bold; /* Texto en negrita */
+            color: #ffcccb; /* Color del texto */
+            text-shadow: 2px 2px #000; /* Sombra del texto */
+        }
+        #restart { /* Botón para reiniciar el juego */
+            background-color: #6e3da5; /* Color de fondo */
+            color: white; /* Color del texto */
+            border: none; /* Sin borde */
+            padding: 12px 25px; /* Relleno */
+            margin-top: 20px; /* Margen superior */
+            font-size: 1.1rem; /* Tamaño de fuente */
+            cursor: pointer; /* Cambia el cursor al pasar */
+            border-radius: 5px; /* Bordes redondeados */
+            position: absolute; /* Posicionamiento absoluto */
+            top: 50%; /* Centrado vertical */
+            right: 30px; /* Espaciado desde la derecha */
+            transform: translateY(-50%); /* Ajusta el centrado */
+            display: none; /* Oculto por defecto */
+        }
+        #restart:hover { /* Efecto al pasar sobre el botón */
+            background-color: #742872; /* Cambia el color */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Juego del Ahorcado</h1>
+        <canvas id="hangmanCanvas" width="200" height="300"></canvas>
+        <div id="word"></div>
+        <div id="result"></div>
+        <div class="keyboard"></div>
+        <button id="restart">Reiniciar Juego</button>
+    </div>
+
+    <script>
+        const words = [ "HTML", "CSS", "JAVASCRIPT", "PYTHON", "COMPILADORES",
+                        "TELEVISOR", "SILLA", "CAMA", "LÁMPARA", "MESA",
+                        "RELOJ", "FOTOGRAFÍA", "VENTILADOR", "ALMOHADA", "LIBRO",
+                        "CUADERNO", "CÁMARA", "TELÉFONO", "COMPUTADORA", "SOMBRERO",
+                        "CARRO", "BICICLETA", "GUITARRA", "PELOTA", "PANTALÓN",
+                        "CHALECO", "MÓVIL", "BOLÍGRAFO", "ESPEJO", "CANDADO",
+                        "LLAVE", "MOCHILA", "ZAPATO", "PESCADO", "PARED"];
+        let word = words[Math.floor(Math.random() * words.length)];
+        let guessed = Array(word.length).fill("_");
+        let attempts = 6;
+
+        const canvas = document.getElementById("hangmanCanvas");
+        const ctx = canvas.getContext("2d");
+        const keyboard = document.querySelector(".keyboard");
+        const restartButton = document.getElementById("restart");
+        const resultDiv = document.getElementById("result");
+
+        const parts = [
+        () => { 
+            ctx.font = "30px Arial";
+            ctx.fillText("💀", 80, 80); // Cabeza
+        },
+        () => { 
+            ctx.beginPath();
+            ctx.moveTo(100, 100); 
+            ctx.lineTo(100, 170); 
+            ctx.stroke(); // Cuerpo
+            ctx.closePath();
+        },
+        () => { 
+            ctx.beginPath();
+            ctx.moveTo(100, 120); 
+            ctx.lineTo(70, 150); 
+            ctx.stroke(); // Brazo izquierdo
+            ctx.closePath();
+        },
+        () => { 
+            ctx.beginPath();
+            ctx.moveTo(100, 120); 
+            ctx.lineTo(130, 150); 
+            ctx.stroke(); // Brazo derecho
+            ctx.closePath();
+        },
+        () => { 
+            ctx.beginPath();
+            ctx.moveTo(100, 170); 
+            ctx.lineTo(70, 210); 
+            ctx.stroke(); // Pierna izquierda
+            ctx.closePath();
+        },
+        () => { 
+            ctx.beginPath();
+            ctx.moveTo(100, 170); 
+            ctx.lineTo(130, 210); 
+            ctx.stroke(); // Pierna derecha
+            ctx.closePath();
+        }
+        ];
+
+        function drawPart() {
+            const partIndex = 6 - attempts; 
+            if (partIndex >= 0 && partIndex < parts.length) {
+                parts[partIndex]();
+            }
+        }
+
+        function updateWord() {
+            document.getElementById("word").textContent = guessed.join(" ");
+        }
+
+        function disableKeyboard() {
+            document.querySelectorAll(".key").forEach(key => key.disabled = true);
+        }
+
+        function handleGuess(letter) {
+            if (attempts > 0) {
+                let found = false;
+
+                // Verifica si la letra está en la palabra
+                for (let i = 0; i < word.length; i++) {
+                    if (word[i] === letter) {
+                        guessed[i] = letter;
+                        found = true;
+                    }
+                }
+
+                // Si no se encuentra, reduce intentos y dibuja una parte
+                if (!found) {
+                    drawPart();  
+                    attempts--;  
+                }
+
+                updateWord();  
+
+                // Comprobación del resultado (si el jugador ganó o perdió)
+                if (guessed.join("") === word) {
+                    resultDiv.textContent = "¡Ganaste! 🎉";
+                    disableKeyboard();  
+                    restartButton.style.display = "block";  
+                } else if (attempts === 0) {
+                    resultDiv.textContent = `Perdiste 😞. La palabra era: ${word}`;
+                    disableKeyboard();  
+                    restartButton.style.display = "block";  
+                }
+            }
+        }
+
+        function showKeyboard() {
+            keyboard.innerHTML = "";
+            for (let i = 65; i <= 90; i++) {
+                const button = document.createElement("button");
+                button.textContent = String.fromCharCode(i);
+                button.className = "key";
+                button.addEventListener("click", () => {
+                    handleGuess(button.textContent);
+                    button.disabled = true; 
+                });
+                keyboard.appendChild(button);
+            }
+        }
+
+        function resetGame() {
+            word = words[Math.floor(Math.random() * words.length)];
+            guessed = Array(word.length).fill("_");
+            attempts = 6;
+
+            // Limpia completamente el canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            resultDiv.textContent = "";
+            restartButton.style.display = "none";
+            updateWord();
+            showKeyboard();
+
+            // Reinicializa las partes
+            initializeParts();
+        }
+
+        // Inicialización al cargar
+        document.addEventListener("DOMContentLoaded", () => {
+            updateWord();  
+            showKeyboard();  
+            restartButton.addEventListener("click", resetGame);  
+
+            // Inicializa las partes al comienzo
+            initializeParts();
+});
+    </script>
+</body>
+</html>
